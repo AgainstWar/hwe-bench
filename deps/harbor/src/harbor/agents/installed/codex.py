@@ -670,6 +670,16 @@ class Codex(BaseInstalledAgent):
         if openai_base_url := self._get_env("OPENAI_BASE_URL"):
             env["OPENAI_BASE_URL"] = openai_base_url
 
+        local_config = Path.home() / ".codex" / "config.toml"
+        if local_config.is_file():
+            config_target = (EnvironmentPaths.agent_dir / "config.toml").as_posix()
+            await environment.upload_file(str(local_config), config_target)
+            if environment.default_user is not None:
+                await self.exec_as_root(
+                    environment,
+                    command=f"chown {environment.default_user} {config_target}",
+                )
+
         setup_command = ""
         if not auth_json_path:
             # Write a synthetic auth.json for API key auth
