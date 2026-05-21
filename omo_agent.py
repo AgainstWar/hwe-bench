@@ -3,6 +3,7 @@ import json
 import os
 import shlex
 from pathlib import Path
+from typing import Any
 
 from harbor.agents.installed.base import with_prompt_template
 from harbor.agents.installed.opencode import OpenCode
@@ -11,6 +12,17 @@ from harbor.models.agent.context import AgentContext
 
 
 class OMOAgent(OpenCode):
+
+    def __init__(self, *args, omo_claude="no", omo_openai="no", omo_gemini="no",
+                 omo_copilot="no", omo_opencode_zen="no", omo_opencode_go="yes",
+                 omo_zai="no", omo_kimi="no", omo_vercel="no", **kwargs):
+        super().__init__(*args, **kwargs)
+        self._omo_flags = (
+            f"--claude={omo_claude} --openai={omo_openai} --gemini={omo_gemini} "
+            f"--copilot={omo_copilot} --opencode-zen={omo_opencode_zen} "
+            f"--opencode-go={omo_opencode_go} --zai-coding-plan={omo_zai} "
+            f"--kimi-for-coding={omo_kimi} --vercel-ai-gateway={omo_vercel}"
+        )
 
     @staticmethod
     def name() -> str:
@@ -35,11 +47,8 @@ class OMOAgent(OpenCode):
                 '. ~/.nvm/nvm.sh && '
                 'export BUN_INSTALL="$HOME/.bun" && '
                 'export PATH="$BUN_INSTALL/bin:$PATH" && '
-                "bunx oh-my-openagent install --no-tui "
-                "--claude=no --openai=no --gemini=no --copilot=no "
-                "--opencode-zen=no --opencode-go=yes "
-                "--zai-coding-plan=no --kimi-for-coding=no "
-                "--vercel-ai-gateway=no --skip-auth"
+                f"bunx oh-my-openagent install --no-tui "
+                f"{self._omo_flags} --skip-auth"
             ),
         )
 
