@@ -44,6 +44,38 @@ class OMOAgent(OpenCode):
         )
         await self.exec_as_agent(environment,
             command=(
+                "mkdir -p ~/.config/opencode && "
+                "cat > ~/.config/opencode/oh-my-openagent.json << 'PYEOF'\n"
+                "{\n"
+                '  "agents": {\n'
+                '    "sisyphus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "hephaestus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "oracle": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "librarian": {"model": "openai/gpt-5.4"},\n'
+                '    "explore": {"model": "openai/gpt-5.4"},\n'
+                '    "multimodal-looker": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "prometheus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "metis": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "momus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "atlas": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "sisyphus-junior": {"model": "openai/gpt-5.4", "variant": "xhigh"}\n'
+                "  },\n"
+                '  "categories": {\n'
+                '    "visual-engineering": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "ultrabrain": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "deep": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "artistry": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "quick": {"model": "openai/gpt-5.4"},\n'
+                '    "unspecified-low": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "unspecified-high": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
+                '    "writing": {"model": "openai/gpt-5.4", "variant": "xhigh"}\n'
+                "  }\n"
+                "}\n"
+                "PYEOF"
+            ),
+        )
+        await self.exec_as_agent(environment,
+            command=(
                 '. ~/.nvm/nvm.sh && '
                 'export BUN_INSTALL="$HOME/.bun" && '
                 'export PATH="$BUN_INSTALL/bin:$PATH" && '
@@ -52,29 +84,6 @@ class OMOAgent(OpenCode):
                 "cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null; "
                 "cp ~/.config/opencode/oh-my-openagent.json /logs/agent/oh-my-openagent.json 2>/dev/null; "
                 "true"
-            ),
-        )
-        await self.exec_as_agent(environment,
-            command=(
-                "cat > /tmp/override_omo.py << 'PYEOF'\n"
-                "import json, os\n"
-                "p = os.path.expanduser('~/.config/opencode/oh-my-openagent.json')\n"
-                "if not os.path.exists(p): exit()\n"
-                "c = json.load(open(p))\n"
-                "for s in ('agents', 'categories'):\n"
-                "    for n in c.get(s, {}):\n"
-                "        c[s][n]['model'] = 'openai/gpt-5.4'\n"
-                "        if 'variant' in c[s][n]:\n"
-                "            c[s][n]['variant'] = 'xhigh'\n"
-                "        for fb in c[s][n].get('fallback_models', []):\n"
-                "            fb['model'] = 'openai/gpt-5.4'\n"
-                "            if 'variant' in fb:\n"
-                "                fb['variant'] = 'xhigh'\n"
-                "json.dump(c, open(p, 'w'), indent=2)\n"
-                "print('OMO models overridden: all agents use openai/gpt-5.4 xhigh')\n"
-                "PYEOF\n"
-                "python3 /tmp/override_omo.py && "
-                "cp ~/.config/opencode/oh-my-openagent.json /logs/agent/oh-my-openagent.json 2>/dev/null"
             ),
         )
 
