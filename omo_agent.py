@@ -45,8 +45,20 @@ class OMOAgent(OpenCode):
         await self.exec_as_agent(environment,
             command=(
                 "mkdir -p ~/.config/opencode && "
-                "cat > ~/.config/opencode/oh-my-openagent.json << 'PYEOF'\n"
-                "{\n"
+                "cat > ~/.config/opencode/opencode.json << 'EOF'\n"
+                '{\n'
+                '  "$schema": "https://opencode.ai/config.json",\n'
+                '  "plugin": ["oh-my-openagent@latest"],\n'
+                '  "agent": {"build": {"options": {"store": false}}, "plan": {"options": {"store": false}}}\n'
+                '}\n'
+                "EOF"
+            ),
+        )
+        # Write oh-my-openagent.json with all agents using openai/gpt-5.4
+        await self.exec_as_agent(environment,
+            command=(
+                "cat > ~/.config/opencode/oh-my-openagent.json << 'OMOCFG'\n"
+                '{\n'
                 '  "agents": {\n'
                 '    "sisyphus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "hephaestus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
@@ -59,7 +71,7 @@ class OMOAgent(OpenCode):
                 '    "momus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "atlas": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "sisyphus-junior": {"model": "openai/gpt-5.4", "variant": "xhigh"}\n'
-                "  },\n"
+                '  },\n'
                 '  "categories": {\n'
                 '    "visual-engineering": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "ultrabrain": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
@@ -69,9 +81,9 @@ class OMOAgent(OpenCode):
                 '    "unspecified-low": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "unspecified-high": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "writing": {"model": "openai/gpt-5.4", "variant": "xhigh"}\n'
-                "  }\n"
-                "}\n"
-                "PYEOF"
+                '  }\n'
+                '}\n'
+                "OMOCFG"
             ),
         )
         await self.exec_as_agent(environment,
@@ -79,8 +91,11 @@ class OMOAgent(OpenCode):
                 '. ~/.nvm/nvm.sh && '
                 'export BUN_INSTALL="$HOME/.bun" && '
                 'export PATH="$BUN_INSTALL/bin:$PATH" && '
-                f"bunx oh-my-openagent install --no-tui "
-                f"{self._omo_flags} --skip-auth && "
+                "bunx oh-my-openagent install --no-tui "
+                "--claude=no --openai=no --gemini=no --copilot=no "
+                "--opencode-zen=no --opencode-go=no "
+                "--zai-coding-plan=no --kimi-for-coding=no "
+                "--vercel-ai-gateway=no --skip-auth && "
                 "cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null; "
                 "cp ~/.config/opencode/oh-my-openagent.json /logs/agent/oh-my-openagent.json 2>/dev/null; "
                 "true"
