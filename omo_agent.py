@@ -76,10 +76,9 @@ class OMOAgent(OpenCode):
                 },
             }
         })
-        escaped = shlex.quote(provider_config)
         return (
             f"mkdir -p ~/.config/opencode && "
-            f"echo {escaped} > /tmp/provider.json && "
+            f"echo {shlex.quote(provider_config)} > /tmp/provider.json && "
             f"python3 -c \""
             f"import json, os; "
             f"p=os.path.expanduser('~/.config/opencode/opencode.json'); "
@@ -90,12 +89,6 @@ class OMOAgent(OpenCode):
             f"\" && "
             f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null"
         )
-            for server in self.mcp_servers:
-                if server.transport == "stdio":
-                    cmd = [server.command] + server.args if server.command else []
-                    config.setdefault("mcp", {})[server.name] = {"type": "local", "command": cmd}
-                else:
-                    config.setdefault("mcp", {})[server.name] = {"type": "remote", "url": server.url}
 
         if self.model_name and "/" in self.model_name:
             provider, model_id = self.model_name.split("/", 1)
