@@ -53,16 +53,10 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config = {}
-        existing = Path.home() / ".config" / "opencode" / "opencode.json"
-        if existing.exists():
-            try:
-                config = json.loads(existing.read_text())
-            except (json.JSONDecodeError, OSError):
-                pass
+        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
 
         if self.mcp_servers:
-            mcp = {}
+            mcp: dict[str, dict[str, Any]] = {}
             for server in self.mcp_servers:
                 if server.transport == "stdio":
                     cmd_list = [server.command] + server.args if server.command else []
@@ -73,7 +67,7 @@ class OMOAgent(OpenCode):
 
         if self.model_name and "/" in self.model_name:
             provider, model_id = self.model_name.split("/", 1)
-            provider_config = {"models": {model_id: {}}}
+            provider_config: dict[str, Any] = {"models": {model_id: {}}}
             base_url = os.environ.get("OPENAI_BASE_URL")
             if base_url and provider == "openai":
                 provider_config.setdefault("options", {})["baseURL"] = base_url
@@ -85,8 +79,19 @@ class OMOAgent(OpenCode):
         if not config:
             return None
 
+        # Use sed to merge with existing container config, preserving omo plugin field
         escaped = shlex.quote(json.dumps(config, indent=2))
-        return f"mkdir -p ~/.config/opencode && echo {escaped} > ~/.config/opencode/opencode.json"
+        return (
+            f"mkdir -p ~/.config/opencode && "
+            f"if [ -f ~/.config/opencode/opencode.json ]; then "
+            f"  python3 -c \""
+            f"import json;"
+            f"d=json.load(open('{shlex.quote(Path.home().as_posix())}/.config/opencode/opencode.json'));"  # noqa: E501
+            f"d.update({escaped});"
+            f"json.dump(d,open('~/.config/opencode/opencode.json','w'),indent=2)"
+            f"\"; "
+            f"else echo {escaped} > ~/.config/opencode/opencode.json; fi"
+        )
 
     def _convert_events_to_trajectory(self, events):
         trajectory = super()._convert_events_to_trajectory(events)
