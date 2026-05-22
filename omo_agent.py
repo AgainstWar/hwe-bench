@@ -56,28 +56,44 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
-
         api_key = os.environ.get("OPENAI_API_KEY") or ""
         base_url = os.environ.get("OPENAI_BASE_URL") or ""
-        if api_key and base_url:
-            config["provider"] = {
-                "openai": {
-                    "options": {"baseURL": base_url, "apiKey": api_key},
-                    "models": {
-                        "gpt-5.2": {"name": "GPT-5.2", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "gpt-5.5": {"name": "GPT-5.5", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "gpt-5.5-pro": {"name": "GPT-5.5 Pro", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "gpt-5.4": {"name": "GPT-5.4", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "gpt-5.4-mini": {"name": "GPT-5.4 Mini", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "gpt-5.3-codex-spark": {"name": "GPT-5.3 Codex Spark", "limit": {"context": 128000, "output": 32000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
-                        "gpt-5.3-codex": {"name": "GPT-5.3 Codex", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                        "codex-mini-latest": {"name": "Codex Mini", "limit": {"context": 200000, "output": 100000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
-                    },
-                }
-            }
+        if not api_key or not base_url:
+            return None
 
-        if self.mcp_servers:
+        provider_config = json.dumps({
+            "openai": {
+                "options": {"baseURL": base_url, "apiKey": api_key},
+                "models": {
+                    "gpt-5.2": {"name": "GPT-5.2", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "gpt-5.5": {"name": "GPT-5.5", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "gpt-5.5-pro": {"name": "GPT-5.5 Pro", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "gpt-5.4": {"name": "GPT-5.4", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "gpt-5.4-mini": {"name": "GPT-5.4 Mini", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "gpt-5.3-codex-spark": {"name": "GPT-5.3 Codex Spark", "limit": {"context": 128000, "output": 32000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                    "gpt-5.3-codex": {"name": "GPT-5.3 Codex", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                    "codex-mini-latest": {"name": "Codex Mini", "limit": {"context": 200000, "output": 100000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                },
+            }
+        })
+        escaped = shlex.quote(provider_config)
+        return (
+            f"mkdir -p ~/.config/opencode && "
+            f"cat > /tmp/add_provider.py << 'PYEOF'\n"
+            f"import json, os\n"
+            f"p = os.path.expanduser('~/.config/opencode/opencode.json')\n"
+            f"cfg = json.loads('{escaped}')\n"
+            f"if os.path.exists(p):\n"
+            f"    d = json.load(open(p))\n"
+            f"else:\n"
+            f"    d = {{}}\n"
+            f"d['provider'] = cfg\n"
+            f"json.dump(d, open(p, 'w'), indent=2)\n"
+            f"print('Provider config added')\n"
+            f"PYEOF\n"
+            f"python3 /tmp/add_provider.py && "
+            f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null"
+        )
             for server in self.mcp_servers:
                 if server.transport == "stdio":
                     cmd = [server.command] + server.args if server.command else []
