@@ -164,7 +164,8 @@ class OMOAgent(OpenCode):
         for event in events:
             if event.get("type") != "tool_use":
                 continue
-            meta = event.get("state", {}).get("metadata", {}) or {}
+            part = event.get("part", {}) or {}
+            meta = part.get("state", {}).get("metadata", {}) or {}
             model_info = meta.get("model", {}) or {}
             model_id = model_info.get("modelID", "") or ""
             if not model_id:
