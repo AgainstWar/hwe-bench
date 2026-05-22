@@ -14,7 +14,7 @@ from harbor.models.agent.context import AgentContext
 class OMOAgent(OpenCode):
 
     def __init__(self, *args, omo_claude="no", omo_openai="no", omo_gemini="no",
-                 omo_copilot="no", omo_opencode_zen="no", omo_opencode_go="yes",
+                 omo_copilot="no", omo_opencode_zen="no", omo_opencode_go="no",
                  omo_zai="no", omo_kimi="no", omo_vercel="no", **kwargs):
         super().__init__(*args, **kwargs)
         self._omo_flags = (
