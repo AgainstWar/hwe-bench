@@ -15,8 +15,10 @@ class OMOAgent(OpenCode):
 
     def __init__(self, *args, omo_claude="no", omo_openai="no", omo_gemini="no",
                  omo_copilot="no", omo_opencode_zen="no", omo_opencode_go="no",
-                 omo_zai="no", omo_kimi="no", omo_vercel="no", **kwargs):
+                 omo_zai="no", omo_kimi="no", omo_vercel="no",
+                 reasoning_effort="", **kwargs):
         super().__init__(*args, **kwargs)
+        self._omo_reasoning_effort = reasoning_effort
         self._omo_flags = (
             f"--claude={omo_claude} --openai={omo_openai} --gemini={omo_gemini} "
             f"--copilot={omo_copilot} --opencode-zen={omo_opencode_zen} "
@@ -231,11 +233,12 @@ class OMOAgent(OpenCode):
             await self.exec_as_agent(environment, command=mcp_cmd, env=env)
 
         model_flag = f"--model={self.model_name} " if self.model_name else ""
+        variant_flag = f"--variant {self._omo_reasoning_effort} " if self._omo_reasoning_effort else ""
         await self.exec_as_agent(
             environment,
             command=(
                 ". ~/.nvm/nvm.sh; "
-                f"opencode {model_flag}run --format=json --thinking "
+                f"opencode {model_flag}{variant_flag}run --format=json --thinking "
                 f"--dangerously-skip-permissions -- {escaped_instruction} "
                 f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/opencode.txt"
             ),
