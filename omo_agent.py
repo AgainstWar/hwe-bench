@@ -53,7 +53,10 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {}
+        config: dict[str, Any] = {
+            "plugin": ["oh-my-openagent@latest"],
+            "provider": {"opencode-go": {}},
+        }
 
         if self.mcp_servers:
             for server in self.mcp_servers:
