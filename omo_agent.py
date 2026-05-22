@@ -44,6 +44,18 @@ class OMOAgent(OpenCode):
         )
         await self.exec_as_agent(environment,
             command=(
+                '. ~/.nvm/nvm.sh && '
+                'export BUN_INSTALL="$HOME/.bun" && '
+                'export PATH="$BUN_INSTALL/bin:$PATH" && '
+                f"bunx oh-my-openagent install --no-tui "
+                f"{self._omo_flags} --skip-auth && "
+                "cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null; "
+                "cp ~/.config/opencode/oh-my-openagent.json /logs/agent/oh-my-openagent.json 2>/dev/null; "
+                "true"
+            ),
+        )
+        await self.exec_as_agent(environment,
+            command=(
                 "mkdir -p ~/.config/opencode && "
                 "cat > ~/.config/opencode/opencode.json << 'EOF'\n"
                 '{\n'
@@ -59,6 +71,7 @@ class OMOAgent(OpenCode):
             command=(
                 "cat > ~/.config/opencode/oh-my-openagent.json << 'OMOCFG'\n"
                 '{\n'
+                '  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",\n'
                 '  "agents": {\n'
                 '    "sisyphus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
                 '    "hephaestus": {"model": "openai/gpt-5.4", "variant": "xhigh"},\n'
