@@ -53,44 +53,36 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
+        config: dict[str, Any] = {
+            "plugin": ["oh-my-openagent@latest"],
+            "provider": {
+                "opencode-go": {
+                    "models": {
+                        "kimi-k2.6": {},
+                        "glm-5.1": {},
+                        "qwen3.5-plus": {},
+                        "minimax-m2.7": {},
+                    }
+                }
+            },
+        }
 
         if self.mcp_servers:
-            mcp: dict[str, dict[str, Any]] = {}
             for server in self.mcp_servers:
                 if server.transport == "stdio":
-                    cmd_list = [server.command] + server.args if server.command else []
-                    mcp[server.name] = {"type": "local", "command": cmd_list}
+                    cmd = [server.command] + server.args if server.command else []
+                    config.setdefault("mcp", {})[server.name] = {"type": "local", "command": cmd}
                 else:
-                    mcp[server.name] = {"type": "remote", "url": server.url}
-            config["mcp"] = mcp
-
-        if self.model_name and "/" in self.model_name:
-            provider, model_id = self.model_name.split("/", 1)
-            provider_config: dict[str, Any] = {"models": {model_id: {}}}
-            base_url = os.environ.get("OPENAI_BASE_URL")
-            if base_url and provider == "openai":
-                provider_config.setdefault("options", {})["baseURL"] = base_url
-            config["provider"] = {provider: provider_config}
+                    config.setdefault("mcp", {})[server.name] = {"type": "remote", "url": server.url}
 
         config = self._deep_merge(copy.deepcopy(self._DEFAULT_CONFIG), config)
         config = self._deep_merge(config, self._opencode_config)
 
-        if not config:
-            return None
-
-        # Use sed to merge with existing container config, preserving omo plugin field
         escaped = shlex.quote(json.dumps(config, indent=2))
         return (
             f"mkdir -p ~/.config/opencode && "
-            f"if [ -f ~/.config/opencode/opencode.json ]; then "
-            f"  python3 -c \""
-            f"import json;"
-            f"d=json.load(open('{shlex.quote(Path.home().as_posix())}/.config/opencode/opencode.json'));"  # noqa: E501
-            f"d.update({escaped});"
-            f"json.dump(d,open('~/.config/opencode/opencode.json','w'),indent=2)"
-            f"\"; "
-            f"else echo {escaped} > ~/.config/opencode/opencode.json; fi"
+            f"echo {escaped} > ~/.config/opencode/opencode.json && "
+            f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json"
         )
 
     def _convert_events_to_trajectory(self, events):
@@ -101,7 +93,7 @@ class OMOAgent(OpenCode):
         for event in events:
             if event.get("type") != "step_finish":
                 continue
-            part = event.get("part") or {}
+            part = event.get("part", {})
             model = part.get("model", "") or ""
             if not model:
                 continue
@@ -114,8 +106,8 @@ class OMOAgent(OpenCode):
     async def run(self, instruction: str, environment: BaseEnvironment,
                   context: AgentContext) -> None:
         escaped_instruction = shlex.quote(instruction)
-        env = {}
-        keys = []
+        env: dict[str, str] = {}
+        keys: list[str] = []
 
         provider = self.model_name.split("/", 1)[0] if self.model_name and "/" in self.model_name else None
 
@@ -179,81 +171,3 @@ class OMOAgent(OpenCode):
             ),
             env=env,
         )
-        await self.exec_as_agent(environment,
-            command=(
-                "curl -fsSL https://bun.sh/install | bash && "
-                'export BUN_INSTALL="$HOME/.bun" && '
-                'export PATH="$BUN_INSTALL/bin:$PATH" && '
-                "bun --version"
-            ),
-        )
-        await self.exec_as_agent(environment,
-            command=(
-                '. ~/.nvm/nvm.sh && '
-                'export BUN_INSTALL="$HOME/.bun" && '
-                'export PATH="$BUN_INSTALL/bin:$PATH" && '
-                "bunx oh-my-openagent install --no-tui "
-                "--claude=no --openai=no --gemini=no --copilot=no "
-                "--opencode-zen=no --opencode-go=yes "
-                "--zai-coding-plan=no --kimi-for-coding=no "
-                "--vercel-ai-gateway=no --skip-auth"
-            ),
-        )
-
-    def _build_register_config_command(self) -> str | None:
-        """Preserve existing opencode.json (incl. omo plugin) and merge new config."""
-        config: dict[str, Any] = {}
-
-        existing = Path.home() / ".config" / "opencode" / "opencode.json"
-        if existing.exists():
-            try:
-                config = json.loads(existing.read_text())
-            except (json.JSONDecodeError, OSError):
-                pass
-
-        if self.mcp_servers:
-            mcp: dict[str, dict[str, Any]] = {}
-            for server in self.mcp_servers:
-                if server.transport == "stdio":
-                    cmd_list = [server.command] + server.args if server.command else []
-                    mcp[server.name] = {"type": "local", "command": cmd_list}
-                else:
-                    mcp[server.name] = {"type": "remote", "url": server.url}
-            config["mcp"] = mcp
-
-        if self.model_name and "/" in self.model_name:
-            provider, model_id = self.model_name.split("/", 1)
-            provider_config: dict[str, Any] = {"models": {model_id: {}}}
-            base_url = os.environ.get("OPENAI_BASE_URL")
-            if base_url and provider == "openai":
-                provider_config.setdefault("options", {})["baseURL"] = base_url
-            config["provider"] = {provider: provider_config}
-
-        config = self._deep_merge(copy.deepcopy(self._DEFAULT_CONFIG), config)
-        config = self._deep_merge(config, self._opencode_config)
-
-        if not config:
-            return None
-
-        config_json = json.dumps(config, indent=2)
-        escaped = shlex.quote(config_json)
-        return f"mkdir -p ~/.config/opencode && echo {escaped} > ~/.config/opencode/opencode.json"
-
-    def _convert_events_to_trajectory(self, events):
-        trajectory = super()._convert_events_to_trajectory(events)
-        if not trajectory or not events:
-            return trajectory
-
-        step_idx = 0
-        for event in events:
-            if event.get("type") != "step_finish":
-                continue
-            part = event.get("part", {})
-            model = part.get("model", "") or ""
-            if not model:
-                continue
-            if step_idx < len(trajectory.steps):
-                trajectory.steps[step_idx].model_name = model
-                step_idx += 1
-
-        return trajectory
