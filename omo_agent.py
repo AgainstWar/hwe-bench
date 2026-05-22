@@ -128,10 +128,6 @@ class OMOAgent(OpenCode):
             if key in os.environ:
                 env[key] = os.environ[key]
 
-        self.logger.info(f"OMO agent env keys for run: {list(env.keys())}")
-        self.logger.info(f"OPENCODE_API_KEY present: {'OPENCODE_API_KEY' in os.environ}")
-        self.logger.info(f"OPENCODE_API_KEY in extra_env: {'OPENCODE_API_KEY' in self._extra_env}")
-
         env["OPENCODE_FAKE_VCS"] = "git"
 
         skills_cmd = self._build_register_skills_command()
