@@ -48,7 +48,10 @@ class OMOAgent(OpenCode):
                 'export BUN_INSTALL="$HOME/.bun" && '
                 'export PATH="$BUN_INSTALL/bin:$PATH" && '
                 f"bunx oh-my-openagent install --no-tui "
-                f"{self._omo_flags} --skip-auth"
+                f"{self._omo_flags} --skip-auth && "
+                "cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null; "
+                "cp ~/.config/opencode/oh-my-openagent.json /logs/agent/oh-my-openagent.json 2>/dev/null; "
+                "true"
             ),
         )
 
@@ -78,7 +81,11 @@ class OMOAgent(OpenCode):
             return None
 
         escaped = shlex.quote(json.dumps(config, indent=2))
-        return f"mkdir -p ~/.config/opencode && echo {escaped} > ~/.config/opencode/opencode.json"
+        return (
+            f"mkdir -p ~/.config/opencode && "
+            f"echo {escaped} > ~/.config/opencode/opencode.json && "
+            f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null"
+        )
 
     @with_prompt_template
     async def run(self, instruction: str, environment: BaseEnvironment,
