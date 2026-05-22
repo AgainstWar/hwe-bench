@@ -166,10 +166,23 @@ class OMOAgent(OpenCode):
             if event.get("type") != "step_finish":
                 continue
             part = event.get("part", {})
-            model = part.get("model", "") or ""
-            if not model:
+            tokens = part.get("tokens", {})
+            if not tokens:
                 continue
             if step_idx < len(trajectory.steps):
-                trajectory.steps[step_idx].model_name = model
                 step_idx += 1
+        # Extract model names from tool_use metadata
+        model_map: dict[int, str] = {}
+        for event in events:
+            if event.get("type") != "tool_use":
+                continue
+            meta = event.get("state", {}).get("metadata", {}) or {}
+            model_info = meta.get("model", {}) or {}
+            model_id = model_info.get("modelID", "") or ""
+            if not model_id:
+                continue
+            ts = event.get("timestamp", 0)
+            for idx, step in enumerate(trajectory.steps):
+                if step.model_name == "?" or not step.model_name:
+                    step.model_name = model_id
         return trajectory
