@@ -61,35 +61,33 @@ class OMOAgent(OpenCode):
         if not api_key or not base_url:
             return None
 
-        provider_config = json.dumps({
-            "openai": {
-                "options": {"baseURL": base_url, "apiKey": api_key},
-                "models": {
-                    "gpt-5.2": {"name": "GPT-5.2", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "gpt-5.5": {"name": "GPT-5.5", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "gpt-5.5-pro": {"name": "GPT-5.5 Pro", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "gpt-5.4": {"name": "GPT-5.4", "limit": {"context": 1050000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "gpt-5.4-mini": {"name": "GPT-5.4 Mini", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "gpt-5.3-codex-spark": {"name": "GPT-5.3 Codex Spark", "limit": {"context": 128000, "output": 32000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
-                    "gpt-5.3-codex": {"name": "GPT-5.3 Codex", "limit": {"context": 400000, "output": 128000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
-                    "codex-mini-latest": {"name": "Codex Mini", "limit": {"context": 200000, "output": 100000}, "options": {"store": false}, "variants": {"low": {}, "medium": {}, "high": {}}},
-                },
-            }
+        config_json = json.dumps({
+            "$schema": "https://opencode.ai/config.json",
+            "plugin": ["oh-my-openagent@latest"],
+            "provider": {
+                "openai": {
+                    "options": {"baseURL": base_url, "apiKey": api_key},
+                    "models": {
+                        "gpt-5.2": {"name": "GPT-5.2", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5": {"name": "GPT-5.5", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5-pro": {"name": "GPT-5.5 Pro", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4": {"name": "GPT-5.4", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4-mini": {"name": "GPT-5.4 Mini", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.3-codex-spark": {"name": "GPT-5.3 Codex Spark", "limit": {"context": 128000, "output": 32000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                        "gpt-5.3-codex": {"name": "GPT-5.3 Codex", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "codex-mini-latest": {"name": "Codex Mini", "limit": {"context": 200000, "output": 100000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                    },
+                }
+            },
+            "agent": {
+                "build": {"options": {"store": False}},
+                "plan": {"options": {"store": False}},
+            },
         })
+        escaped = shlex.quote(config_json)
         return (
             f"mkdir -p ~/.config/opencode && "
-            f"echo {shlex.quote(provider_config)} > /tmp/provider.json && "
-            f"python3 -c \""
-            f"import json, os; "
-            f"p=os.path.expanduser('~/.config/opencode/opencode.json'); "
-            f"cfg=json.load(open('/tmp/provider.json')); "
-            f"d=json.load(open(p)) if os.path.exists(p) else {{}}; "
-            f"d['\$schema']=d.get('\$schema','https://opencode.ai/config.json'); "
-            f"d['plugin']=d.get('plugin',['oh-my-openagent@latest']); "
-            f"d.setdefault('agent',{{'build':{{'options':{{'store':False}}}},'plan':{{'options':{{'store':False}}}}}}); "
-            f"d['provider']=cfg; "
-            f"json.dump(d,open(p,'w'),indent=2)"
-            f"\" && "
+            f"echo {escaped} > ~/.config/opencode/opencode.json && "
             f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null"
         )
 
