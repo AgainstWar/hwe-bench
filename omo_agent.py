@@ -63,6 +63,14 @@ class OMOAgent(OpenCode):
                 else:
                     config.setdefault("mcp", {})[server.name] = {"type": "remote", "url": server.url}
 
+        if self.model_name and "/" in self.model_name:
+            provider, model_id = self.model_name.split("/", 1)
+            provider_config: dict[str, Any] = {"models": {model_id: {}}}
+            base_url = os.environ.get("OPENAI_BASE_URL")
+            if base_url and provider in ("openai", "opencode-go"):
+                provider_config.setdefault("options", {})["baseURL"] = base_url
+            config["provider"] = {provider: provider_config}
+
         config = self._deep_merge(copy.deepcopy(self._DEFAULT_CONFIG), config)
         config = self._deep_merge(config, self._opencode_config)
 
