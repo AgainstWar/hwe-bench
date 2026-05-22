@@ -53,7 +53,7 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
+        config: dict[str, Any] = {}
 
         if self.mcp_servers:
             for server in self.mcp_servers:
@@ -71,14 +71,16 @@ class OMOAgent(OpenCode):
                 provider_config.setdefault("options", {})["baseURL"] = base_url
             config["provider"] = {provider: provider_config}
 
+        if not config:
+            return None
+
         config = self._deep_merge(copy.deepcopy(self._DEFAULT_CONFIG), config)
         config = self._deep_merge(config, self._opencode_config)
 
         escaped = shlex.quote(json.dumps(config, indent=2))
         return (
             f"mkdir -p ~/.config/opencode && "
-            f"echo {escaped} > ~/.config/opencode/opencode.json && "
-            f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json"
+            f"echo {escaped} > ~/.config/opencode/opencode.json"
         )
 
     def _convert_events_to_trajectory(self, events):
