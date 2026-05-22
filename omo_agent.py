@@ -164,14 +164,11 @@ class OMOAgent(OpenCode):
         for event in events:
             if event.get("type") != "tool_use":
                 continue
-            output = event.get("state", {}).get("output", "") or ""
-            if "modelID" not in output:
+            meta = event.get("state", {}).get("metadata", {}) or {}
+            model_info = meta.get("model", {}) or {}
+            model_id = model_info.get("modelID", "") or ""
+            if not model_id:
                 continue
-            import re
-            m = re.search(r'"modelID"\s*:\s*"([^"]+)"', output)
-            if not m:
-                continue
-            model_id = m.group(1)
             for step in trajectory.steps:
                 if not step.model_name:
                     step.model_name = model_id
