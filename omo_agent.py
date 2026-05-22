@@ -53,11 +53,7 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
-
-        api_key = self._get_env("OPENCODE_API_KEY")
-        if api_key:
-            config["provider"] = {"opencode-go": {"options": {"apiKey": api_key}}}
+        config: dict[str, Any] = {}
 
         if self.mcp_servers:
             for server in self.mcp_servers:
@@ -71,38 +67,18 @@ class OMOAgent(OpenCode):
             provider, model_id = self.model_name.split("/", 1)
             provider_config: dict[str, Any] = {"models": {model_id: {}}}
             base_url = os.environ.get("OPENAI_BASE_URL")
-            if base_url and provider in ("openai", "opencode-go"):
+            if base_url and provider == "openai":
                 provider_config.setdefault("options", {})["baseURL"] = base_url
             config["provider"] = {provider: provider_config}
-
-        if not config:
-            return None
 
         config = self._deep_merge(copy.deepcopy(self._DEFAULT_CONFIG), config)
         config = self._deep_merge(config, self._opencode_config)
 
-        escaped = shlex.quote(json.dumps(config, indent=2))
-        return (
-            f"mkdir -p ~/.config/opencode && "
-            f"echo {escaped} > ~/.config/opencode/opencode.json"
-        )
+        if not config:
+            return None
 
-    def _convert_events_to_trajectory(self, events):
-        trajectory = super()._convert_events_to_trajectory(events)
-        if not trajectory or not events:
-            return trajectory
-        step_idx = 0
-        for event in events:
-            if event.get("type") != "step_finish":
-                continue
-            part = event.get("part", {})
-            model = part.get("model", "") or ""
-            if not model:
-                continue
-            if step_idx < len(trajectory.steps):
-                trajectory.steps[step_idx].model_name = model
-                step_idx += 1
-        return trajectory
+        escaped = shlex.quote(json.dumps(config, indent=2))
+        return f"mkdir -p ~/.config/opencode && echo {escaped} > ~/.config/opencode/opencode.json"
 
     @with_prompt_template
     async def run(self, instruction: str, environment: BaseEnvironment,
@@ -152,6 +128,10 @@ class OMOAgent(OpenCode):
             if key in os.environ:
                 env[key] = os.environ[key]
 
+        self.logger.info(f"OMO agent env keys for run: {list(env.keys())}")
+        self.logger.info(f"OPENCODE_API_KEY present: {'OPENCODE_API_KEY' in os.environ}")
+        self.logger.info(f"OPENCODE_API_KEY in extra_env: {'OPENCODE_API_KEY' in self._extra_env}")
+
         env["OPENCODE_FAKE_VCS"] = "git"
 
         skills_cmd = self._build_register_skills_command()
@@ -173,3 +153,20 @@ class OMOAgent(OpenCode):
             ),
             env=env,
         )
+
+    def _convert_events_to_trajectory(self, events):
+        trajectory = super()._convert_events_to_trajectory(events)
+        if not trajectory or not events:
+            return trajectory
+        step_idx = 0
+        for event in events:
+            if event.get("type") != "step_finish":
+                continue
+            part = event.get("part", {})
+            model = part.get("model", "") or ""
+            if not model:
+                continue
+            if step_idx < len(trajectory.steps):
+                trajectory.steps[step_idx].model_name = model
+                step_idx += 1
+        return trajectory
