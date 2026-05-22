@@ -169,8 +169,9 @@ class OMOAgent(OpenCode):
             model_id = model_info.get("modelID", "") or ""
             if not model_id:
                 continue
+            name = f"{model_info.get('providerID', '')}/{model_id}"
             for step in trajectory.steps:
                 if not step.model_name:
-                    step.model_name = model_id
+                    step.model_name = name
                     break
         return trajectory
