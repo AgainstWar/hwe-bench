@@ -56,7 +56,7 @@ class OMOAgent(OpenCode):
         )
 
     def _build_register_config_command(self) -> str | None:
-        config: dict[str, Any] = {}
+        config: dict[str, Any] = {"plugin": ["oh-my-openagent@latest"]}
 
         api_key = os.environ.get("OPENAI_API_KEY") or ""
         base_url = os.environ.get("OPENAI_BASE_URL") or ""
