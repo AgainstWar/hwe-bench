@@ -79,19 +79,15 @@ class OMOAgent(OpenCode):
         escaped = shlex.quote(provider_config)
         return (
             f"mkdir -p ~/.config/opencode && "
-            f"cat > /tmp/add_provider.py << 'PYEOF'\n"
-            f"import json, os\n"
-            f"p = os.path.expanduser('~/.config/opencode/opencode.json')\n"
-            f"cfg = json.loads('{escaped}')\n"
-            f"if os.path.exists(p):\n"
-            f"    d = json.load(open(p))\n"
-            f"else:\n"
-            f"    d = {{}}\n"
-            f"d['provider'] = cfg\n"
-            f"json.dump(d, open(p, 'w'), indent=2)\n"
-            f"print('Provider config added')\n"
-            f"PYEOF\n"
-            f"python3 /tmp/add_provider.py && "
+            f"echo {escaped} > /tmp/provider.json && "
+            f"python3 -c \""
+            f"import json, os; "
+            f"p=os.path.expanduser('~/.config/opencode/opencode.json'); "
+            f"cfg=json.load(open('/tmp/provider.json')); "
+            f"d=json.load(open(p)) if os.path.exists(p) else {{}}; "
+            f"d['provider']=cfg; "
+            f"json.dump(d,open(p,'w'),indent=2)"
+            f"\" && "
             f"cp ~/.config/opencode/opencode.json /logs/agent/opencode.json 2>/dev/null"
         )
             for server in self.mcp_servers:
