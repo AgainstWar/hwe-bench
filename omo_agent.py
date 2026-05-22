@@ -58,6 +58,25 @@ class OMOAgent(OpenCode):
     def _build_register_config_command(self) -> str | None:
         config: dict[str, Any] = {}
 
+        api_key = os.environ.get("OPENAI_API_KEY") or ""
+        base_url = os.environ.get("OPENAI_BASE_URL") or ""
+        if api_key and base_url:
+            config["provider"] = {
+                "openai": {
+                    "options": {"baseURL": base_url, "apiKey": api_key},
+                    "models": {
+                        "gpt-5.2": {"limit": {"context": 400000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5": {"limit": {"context": 1050000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5-pro": {"limit": {"context": 1050000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4": {"limit": {"context": 1050000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4-mini": {"limit": {"context": 400000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.3-codex-spark": {"limit": {"context": 128000, "output": 32000}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                        "gpt-5.3-codex": {"limit": {"context": 400000, "output": 128000}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "codex-mini-latest": {"limit": {"context": 200000, "output": 100000}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                    },
+                }
+            }
+
         if self.mcp_servers:
             for server in self.mcp_servers:
                 if server.transport == "stdio":
