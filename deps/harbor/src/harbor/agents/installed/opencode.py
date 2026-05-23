@@ -338,12 +338,26 @@ class OpenCode(BaseInstalledAgent):
         )
 
     def _build_register_config_command(self) -> str | None:
-        """Return a shell command that writes the opencode config to ~/.config/opencode/opencode.json.
-
-        The config may include MCP server definitions and/or a provider model
-        registration so opencode recognises models not in its built-in registry.
-        """
         config: dict[str, Any] = {}
+
+        api_key = os.environ.get("OPENAI_API_KEY") or ""
+        base_url = os.environ.get("OPENAI_BASE_URL") or ""
+        if api_key and base_url:
+            config["provider"] = {
+                "openai": {
+                    "options": {"baseURL": base_url, "apiKey": api_key},
+                    "models": {
+                        "gpt-5.2": {"name": "GPT-5.2", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5": {"name": "GPT-5.5", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.5-pro": {"name": "GPT-5.5 Pro", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4": {"name": "GPT-5.4", "limit": {"context": 1050000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.4-mini": {"name": "GPT-5.4 Mini", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "gpt-5.3-codex-spark": {"name": "GPT-5.3 Codex Spark", "limit": {"context": 128000, "output": 32000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                        "gpt-5.3-codex": {"name": "GPT-5.3 Codex", "limit": {"context": 400000, "output": 128000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}, "xhigh": {}}},
+                        "codex-mini-latest": {"name": "Codex Mini", "limit": {"context": 200000, "output": 100000}, "options": {"store": False}, "variants": {"low": {}, "medium": {}, "high": {}}},
+                    },
+                }
+            }
 
         if self.mcp_servers:
             mcp: dict[str, dict[str, Any]] = {}
@@ -363,7 +377,7 @@ class OpenCode(BaseInstalledAgent):
                 # opencode reads baseURL from provider.options, not the provider root.
                 # See: https://github.com/anomalyco/opencode config.ts ProviderConfig schema.
                 provider_config.setdefault("options", {})["baseURL"] = base_url
-            config["provider"] = {provider: provider_config}
+            config.setdefault("provider", {}).setdefault(provider, {}).update(provider_config)
 
         # Layer: defaults → auto-generated → job-level overrides.
         # Deep-merge preserves sibling keys within nested dicts (e.g. provider, experimental).
