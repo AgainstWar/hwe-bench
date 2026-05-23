@@ -49,9 +49,10 @@ class OpenCode(BaseInstalledAgent):
     #       continue_loop_on_deny: true
     _DEFAULT_CONFIG: dict[str, Any] = {}
 
-    def __init__(self, *args, opencode_config: dict[str, Any] | None = None, **kwargs):
+    def __init__(self, *args, opencode_config: dict[str, Any] | None = None, reasoning_effort: str | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self._opencode_config: dict[str, Any] = opencode_config or {}
+        self._reasoning_effort: str | None = reasoning_effort
 
     @staticmethod
     def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -473,12 +474,14 @@ class OpenCode(BaseInstalledAgent):
         if mcp_command:
             await self.exec_as_agent(environment, command=mcp_command, env=env)
 
+        reasoning_effort = self._reasoning_effort or self._get_env("reasoning_effort")
+        variant_flag = f"--variant {reasoning_effort} " if reasoning_effort else ""
         await self.exec_as_agent(
             environment,
             # Note that the --thinking flag just means thinking blocks will be included in the json formatted output
             command=(
                 ". ~/.nvm/nvm.sh; "
-                f"opencode --model={self.model_name} run --format=json --thinking --dangerously-skip-permissions -- {escaped_instruction} "
+                f"opencode --model={self.model_name} {variant_flag}run --format=json --thinking --dangerously-skip-permissions -- {escaped_instruction} "
                 f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/opencode.txt"
             ),
             env=env,
