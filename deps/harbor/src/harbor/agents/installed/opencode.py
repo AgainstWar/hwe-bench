@@ -446,7 +446,7 @@ class OpenCode(BaseInstalledAgent):
         elif provider == "openai":
             keys.append("OPENAI_API_KEY")
             keys.append("OPENAI_BASE_URL")
-        elif provider == "opencode":
+        elif provider in ("opencode", "opencode-go"):
             keys.append("OPENCODE_API_KEY")
         elif provider == "xai":
             keys.append("XAI_API_KEY")
