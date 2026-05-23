@@ -340,6 +340,10 @@ class OpenCode(BaseInstalledAgent):
     def _build_register_config_command(self) -> str | None:
         config: dict[str, Any] = {}
 
+        code_key = os.environ.get("OPENCODE_API_KEY") or ""
+        if code_key:
+            config["provider"] = {"opencode-go": {}}
+
         api_key = os.environ.get("OPENAI_API_KEY") or ""
         base_url = os.environ.get("OPENAI_BASE_URL") or ""
         if api_key and base_url:
