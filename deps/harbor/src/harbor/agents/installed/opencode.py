@@ -9,6 +9,7 @@ from harbor.agents.installed.base import BaseInstalledAgent, with_prompt_templat
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
 from harbor.models.agent.name import AgentName
+from harbor.models.task.config import MCPServerConfig
 from harbor.models.trajectories import (
     Agent,
     FinalMetrics,
@@ -49,9 +50,16 @@ class OpenCode(BaseInstalledAgent):
     #       continue_loop_on_deny: true
     _DEFAULT_CONFIG: dict[str, Any] = {}
 
-    def __init__(self, *args, opencode_config: dict[str, Any] | None = None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        opencode_config: dict[str, Any] | None = None,
+        reasoning_effort: str | None = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self._opencode_config: dict[str, Any] = opencode_config or {}
+        self._reasoning_effort: str | None = reasoning_effort
 
     @staticmethod
     def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -68,25 +76,30 @@ class OpenCode(BaseInstalledAgent):
         return AgentName.OPENCODE.value
 
     def get_version_command(self) -> str | None:
-        return ". ~/.nvm/nvm.sh; opencode --version"
+        return "opencode --version"
 
     async def install(self, environment: BaseEnvironment) -> None:
         await self.exec_as_root(
             environment,
-            command="apt-get update && apt-get install -y curl",
+            command=(
+                "sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && "
+                "sed -i 's|http://security.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list && "
+                "apt-get update && apt-get install -y curl xz-utils gtkwave"
+            ),
             env={"DEBIAN_FRONTEND": "noninteractive"},
+        )
+        await self.exec_as_agent(
+            environment, command="pip install pyyaml -q 2>/dev/null || true"
         )
         version_spec = f"@{self._version}" if self._version else "@latest"
         await self.exec_as_agent(
             environment,
             command=(
                 "set -euo pipefail; "
-                "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash && "
-                'export NVM_DIR="$HOME/.nvm" && '
-                '\\. "$NVM_DIR/nvm.sh" || true && '
-                "command -v nvm &>/dev/null || { echo 'Error: NVM failed to load' >&2; exit 1; } && "
-                "nvm install 22 && npm -v && "
-                f"npm i -g opencode-ai{version_spec} && "
+                "curl -fsSL https://registry.npmmirror.com/-/binary/node/v22.14.0/node-v22.14.0-linux-x64.tar.xz "
+                "| tar xJ -C /usr/local --strip-components=1 && "
+                "npm -v && "
+                f"npm i -g --registry=https://registry.npmmirror.com/ opencode-ai{version_spec} && "
                 "opencode --version"
             ),
         )
@@ -338,21 +351,119 @@ class OpenCode(BaseInstalledAgent):
         )
 
     def _build_register_config_command(self) -> str | None:
-        """Return a shell command that writes the opencode config to ~/.config/opencode/opencode.json.
-
-        The config may include MCP server definitions and/or a provider model
-        registration so opencode recognises models not in its built-in registry.
-        """
         config: dict[str, Any] = {}
+
+        code_key = os.environ.get("OPENCODE_API_KEY") or ""
+        if code_key:
+            config["provider"] = {"opencode-go": {}}
+
+        api_key = os.environ.get("OPENAI_API_KEY") or ""
+        base_url = os.environ.get("OPENAI_BASE_URL") or ""
+        if api_key and base_url:
+            config["provider"] = {
+                "openai": {
+                    "options": {"baseURL": base_url, "apiKey": api_key},
+                    "models": {
+                        "gpt-5.2": {
+                            "name": "GPT-5.2",
+                            "limit": {"context": 400000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "gpt-5.5": {
+                            "name": "GPT-5.5",
+                            "limit": {"context": 1050000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "gpt-5.5-pro": {
+                            "name": "GPT-5.5 Pro",
+                            "limit": {"context": 1050000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "gpt-5.4": {
+                            "name": "GPT-5.4",
+                            "limit": {"context": 1050000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "gpt-5.4-mini": {
+                            "name": "GPT-5.4 Mini",
+                            "limit": {"context": 400000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "gpt-5.3-codex-spark": {
+                            "name": "GPT-5.3 Codex Spark",
+                            "limit": {"context": 128000, "output": 32000},
+                            "options": {"store": False},
+                            "variants": {"low": {}, "medium": {}, "high": {}},
+                        },
+                        "gpt-5.3-codex": {
+                            "name": "GPT-5.3 Codex",
+                            "limit": {"context": 400000, "output": 128000},
+                            "options": {"store": False},
+                            "variants": {
+                                "low": {},
+                                "medium": {},
+                                "high": {},
+                                "xhigh": {},
+                            },
+                        },
+                        "codex-mini-latest": {
+                            "name": "Codex Mini",
+                            "limit": {"context": 200000, "output": 100000},
+                            "options": {"store": False},
+                            "variants": {"low": {}, "medium": {}, "high": {}},
+                        },
+                    },
+                }
+            }
+
+        config["permission"] = "allow"
 
         if self.mcp_servers:
             mcp: dict[str, dict[str, Any]] = {}
             for server in self.mcp_servers:
                 if server.transport == "stdio":
                     cmd_list = [server.command] + server.args if server.command else []
-                    mcp[server.name] = {"type": "local", "command": cmd_list}
+                    mcp[server.name] = {
+                        "type": "local",
+                        "command": cmd_list,
+                        "enabled": True,
+                    }
                 else:  # sse or streamable-http
-                    mcp[server.name] = {"type": "remote", "url": server.url}
+                    mcp[server.name] = {
+                        "type": "remote",
+                        "url": server.url,
+                        "enabled": True,
+                    }
             config["mcp"] = mcp
 
         if self.model_name and "/" in self.model_name:
@@ -363,7 +474,9 @@ class OpenCode(BaseInstalledAgent):
                 # opencode reads baseURL from provider.options, not the provider root.
                 # See: https://github.com/anomalyco/opencode config.ts ProviderConfig schema.
                 provider_config.setdefault("options", {})["baseURL"] = base_url
-            config["provider"] = {provider: provider_config}
+            config.setdefault("provider", {}).setdefault(provider, {}).update(
+                provider_config
+            )
 
         # Layer: defaults → auto-generated → job-level overrides.
         # Deep-merge preserves sibling keys within nested dicts (e.g. provider, experimental).
@@ -384,7 +497,29 @@ class OpenCode(BaseInstalledAgent):
         environment: BaseEnvironment,
         context: AgentContext,
     ) -> None:
-        escaped_instruction = shlex.quote(instruction)
+        hints: list[str] = []
+        if (self._get_env("WAVES_ENABLED") or "").lower() == "true":
+            hints.append(
+                "[Available MCP: WAVES]\n"
+                "WAVES analyzes VCD/FST waveform files. Use it after generating a VCD "
+                "via the waves-debug skill to query signals, find transitions, and "
+                "inspect timing.\n"
+            )
+        if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
+            hints.append(
+                "[Available Skill: waves-debug]\n"
+                "This skill guides you to enable VCD waveform dumping in simulation.\n"
+                "For every bug that involves logic, timing, FSM, or signal behavior, "
+                "you MUST:\n"
+                "1. Follow this skill to enable VCD dumping and run the testbench.\n"
+                "2. Use WAVES MCP to analyze the generated VCD.\n"
+                "Only skip this workflow for trivial config typos, constant values, "
+                "or pure spec-compliance changes where code review alone is sufficient.\n"
+                "For any other bug, waveform analysis is recommended if it helps "
+                "narrow down or confirm the root cause.\n"
+            )
+        enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
+        escaped_instruction = shlex.quote(enhanced_instruction)
 
         if not self.model_name or "/" not in self.model_name:
             raise ValueError("Model name must be in the format provider/model_name")
@@ -428,7 +563,7 @@ class OpenCode(BaseInstalledAgent):
         elif provider == "openai":
             keys.append("OPENAI_API_KEY")
             keys.append("OPENAI_BASE_URL")
-        elif provider == "opencode":
+        elif provider in ("opencode", "opencode-go"):
             keys.append("OPENCODE_API_KEY")
         elif provider == "xai":
             keys.append("XAI_API_KEY")
@@ -447,6 +582,48 @@ class OpenCode(BaseInstalledAgent):
         # Enable fake VCS for OpenCode
         env["OPENCODE_FAKE_VCS"] = "git"
 
+        # === WAVES MCP（按需安装）===
+        if (self._get_env("WAVES_ENABLED") or "").lower() == "true":
+            await self.exec_as_agent(
+                environment,
+                command=(
+                    "set -o pipefail; "
+                    "{ "
+                    "  if ! command -v waves &>/dev/null; then "
+                    "    git clone --depth 1 https://github.com/AgainstWar/WAVES.git /tools/waves && "
+                    "    pip install /tools/waves; "
+                    "  fi; "
+                    "} 2>&1 | tee -a /logs/agent/setup.log"
+                ),
+                env=env,
+            )
+            waves_mcp = MCPServerConfig(
+                name="waves",
+                transport="stdio",
+                command="bash",
+                args=["-c", "exec $(which waves)"],
+            )
+            self.mcp_servers = (self.mcp_servers or []) + [waves_mcp]
+
+        # === waves-debug skill（按需安装）===
+        self._skill_info: list[dict[str, str]] = []
+        if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
+            await self.exec_as_agent(
+                environment,
+                command=(
+                    "set -o pipefail; "
+                    "{ "
+                    "  if [ ! -d ~/.config/opencode/skills/waves-debug ]; then "
+                    "    git clone --depth 1 https://github.com/AgainstWar/waves-skill.git /tmp/waves-skill && "
+                    "    mkdir -p ~/.config/opencode/skills/waves-debug && "
+                    "    cp /tmp/waves-skill/SKILL.md ~/.config/opencode/skills/waves-debug/ && "
+                    "    cp -r /tmp/waves-skill/references ~/.config/opencode/skills/waves-debug/; "
+                    "  fi; "
+                    "} 2>&1 | tee -a /logs/agent/setup.log"
+                ),
+                env=env,
+            )
+
         skills_command = self._build_register_skills_command()
         if skills_command:
             await self.exec_as_agent(environment, command=skills_command, env=env)
@@ -455,12 +632,13 @@ class OpenCode(BaseInstalledAgent):
         if mcp_command:
             await self.exec_as_agent(environment, command=mcp_command, env=env)
 
+        reasoning_effort = self._reasoning_effort or self._get_env("reasoning_effort")
+        variant_flag = f"--variant {reasoning_effort} " if reasoning_effort else ""
         await self.exec_as_agent(
             environment,
             # Note that the --thinking flag just means thinking blocks will be included in the json formatted output
             command=(
-                ". ~/.nvm/nvm.sh; "
-                f"opencode --model={self.model_name} run --format=json --thinking --dangerously-skip-permissions -- {escaped_instruction} "
+                f"opencode --model={self.model_name} {variant_flag}run --format=json --thinking --dangerously-skip-permissions -- {escaped_instruction} "
                 f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/opencode.txt"
             ),
             env=env,
