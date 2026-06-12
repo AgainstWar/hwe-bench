@@ -86,6 +86,19 @@ class Codex(BaseInstalledAgent):
             ),
             env={"DEBIAN_FRONTEND": "noninteractive"},
         )
+        codex_home = EnvironmentPaths.agent_dir.as_posix()
+        auth: dict[str, str] = {}
+        if api_key := self._get_env("OPENAI_API_KEY"):
+            auth["OPENAI_API_KEY"] = api_key
+        if auth:
+            auth_json_content = json.dumps(auth)
+            escaped_auth = shlex.quote(auth_json_content)
+            await self.exec_as_agent(
+                environment,
+                command=f"mkdir -p {codex_home} && echo {escaped_auth} > {codex_home}/auth.json",
+                env={"CODEX_HOME": codex_home},
+            )
+
         # Install codex (as default user)
         version_spec = f"@{self._version}" if self._version else "@latest"
         await self.exec_as_agent(
@@ -601,33 +614,6 @@ class Codex(BaseInstalledAgent):
         escaped_config = shlex.quote("\n".join(lines))
         return f'echo {escaped_config} > "$CODEX_HOME/config.toml"'
 
-    def _resolve_auth_json_path(self) -> Path | None:
-        """Resolve which auth.json to inject, if any.
-
-        Priority:
-          1. CODEX_FORCE_API_KEY=1 → None (force API key)
-          2. CODEX_AUTH_JSON_PATH=<path> → that path (must exist)
-          3. ~/.codex/auth.json → if it exists
-          4. None (fall back to OPENAI_API_KEY)
-        """
-        if self._get_env("CODEX_FORCE_API_KEY") == "1":
-            return None
-
-        explicit = self._get_env("CODEX_AUTH_JSON_PATH")
-        if explicit:
-            p = Path(explicit)
-            if not p.is_file():
-                raise ValueError(
-                    f"CODEX_AUTH_JSON_PATH points to non-existent file: {explicit}"
-                )
-            return p
-
-        default = Path.home() / ".codex" / "auth.json"
-        if default.is_file():
-            return default
-
-        return None
-
     @with_prompt_template
     async def run(
         self, instruction: str, environment: BaseEnvironment, context: AgentContext
@@ -643,42 +629,27 @@ class Codex(BaseInstalledAgent):
         cli_flags = self.build_cli_flags()
         cli_flags_arg = (cli_flags + " ") if cli_flags else ""
 
-        # Auth resolution:
-        #   1. CODEX_FORCE_API_KEY=1 → always use OPENAI_API_KEY, skip auth.json
-        #   2. CODEX_AUTH_JSON_PATH=<path> → use that specific auth.json file
-        #   3. Default: use ~/.codex/auth.json if it exists, else OPENAI_API_KEY
-        auth_json_path = self._resolve_auth_json_path()
-
+        codex_home = EnvironmentPaths.agent_dir.as_posix()
         env: dict[str, str] = {
-            "CODEX_HOME": EnvironmentPaths.agent_dir.as_posix(),
+            "CODEX_HOME": codex_home,
         }
 
-        if auth_json_path:
-            self.logger.debug("Codex auth: using auth.json from %s", auth_json_path)
-            auth_target = (EnvironmentPaths.agent_dir / "auth.json").as_posix()
-            await environment.upload_file(auth_json_path, auth_target)
-            # upload_file copies as root; fix ownership so the agent user can read it
-            if environment.default_user is not None:
-                await self.exec_as_root(
-                    environment,
-                    command=f"chown {environment.default_user} {auth_target}",
-                )
-        else:
-            self.logger.debug("Codex auth: using OPENAI_API_KEY")
-            env["OPENAI_API_KEY"] = self._get_env("OPENAI_API_KEY") or ""
-
+        if api_key := self._get_env("OPENAI_API_KEY"):
+            env["OPENAI_API_KEY"] = api_key
         if openai_base_url := self._get_env("OPENAI_BASE_URL"):
             env["OPENAI_BASE_URL"] = openai_base_url
 
+        local_config = Path.home() / ".codex" / "config.toml"
+        if local_config.is_file():
+            config_target = (EnvironmentPaths.agent_dir / "config.toml").as_posix()
+            await environment.upload_file(str(local_config), config_target)
+            if environment.default_user is not None:
+                await self.exec_as_root(
+                    environment,
+                    command=f"chown {environment.default_user} {config_target}",
+                )
+
         setup_command = ""
-        if not auth_json_path:
-            # Write a synthetic auth.json for API key auth
-            setup_command += (
-                "mkdir -p /tmp/codex-secrets\n"
-                "cat >/tmp/codex-secrets/auth.json <<EOF\n"
-                '{\n  "OPENAI_API_KEY": "${OPENAI_API_KEY}"\n}\nEOF\n'
-                'ln -sf /tmp/codex-secrets/auth.json "$CODEX_HOME/auth.json"\n'
-            )
 
         skills_command = self._build_register_skills_command()
         if skills_command:
@@ -719,8 +690,8 @@ class Codex(BaseInstalledAgent):
             try:
                 await self.exec_as_agent(
                     environment,
-                    command='rm -rf /tmp/codex-secrets "$CODEX_HOME/auth.json" "$CODEX_HOME/tmp"',
-                    env={"CODEX_HOME": EnvironmentPaths.agent_dir.as_posix()},
+                    command=f'rm -rf "{codex_home}/auth.json" "{codex_home}/tmp"',
+                    env={"CODEX_HOME": codex_home},
                 )
             except Exception:
                 pass

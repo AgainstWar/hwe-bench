@@ -1,0 +1,3 @@
+[submodule "results-archive"]
+	path = results-archive
+	url = https://github.com/AgainstWar/hwe-bench-results.git

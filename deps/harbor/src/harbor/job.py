@@ -640,30 +640,10 @@ class Job:
     def _update_metric_display(
         self, event: TrialHookEvent, loading_progress, loading_progress_task
     ):
-        """Update the progress bar description with the latest metric value."""
-        if not self._metrics or event.result is None:
-            return
-        dataset_name = event.config.task.source or "adhoc"
-        if dataset_name not in self._metrics:
-            return
-
-        rewards = list(
-            self._live_rewards.get(
-                JobStats.format_agent_evals_key(
-                    event.result.agent_info.name,
-                    event.result.agent_info.model_info.name
-                    if event.result.agent_info.model_info
-                    else None,
-                    dataset_name,
-                ),
-                {},
-            ).values()
+        """Update the progress bar description with the latest trial count."""
+        completed = loading_progress.tasks[loading_progress_task].completed if loading_progress_task else 0
+        total = loading_progress.tasks[loading_progress_task].total if loading_progress_task else 0
+        loading_progress.update(
+            loading_progress_task,
+            description=f"completed: {int(completed)}/{int(total)}",
         )
-
-        if rewards:
-            metric_result = self._metrics[dataset_name][0].compute(rewards)
-            first_metric_name, first_metric_value = next(iter(metric_result.items()))
-            loading_progress.update(
-                loading_progress_task,
-                description=f"{first_metric_name.title()}: {first_metric_value:.3f}",
-            )

@@ -723,6 +723,13 @@ true
                 """#!/bin/bash
 set -e
 
+echo "nameserver 223.5.5.5" > /etc/resolv.conf
+
+export HTTP_PROXY="${HTTP_PROXY:-}"
+export HTTPS_PROXY="${HTTPS_PROXY:-}"
+export COURSIER_CACHE=/root/.cache/coursier
+export COURSIER_REPOSITORIES="https://repo1.maven.org/maven2"
+
 cd /home/xiangshan
 git reset --hard
 git clean -fdx
@@ -750,6 +757,13 @@ exit 1
                 "fix-run.sh",
                 """#!/bin/bash
 set -e
+
+echo "nameserver 223.5.5.5" > /etc/resolv.conf
+
+export HTTP_PROXY="${HTTP_PROXY:-}"
+export HTTPS_PROXY="${HTTPS_PROXY:-}"
+export COURSIER_CACHE=/root/.cache/coursier
+export COURSIER_REPOSITORIES="https://repo1.maven.org/maven2"
 
 cd /home/xiangshan
 git reset --hard

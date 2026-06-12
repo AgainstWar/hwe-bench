@@ -743,6 +743,8 @@ true
                 """#!/bin/bash
 set -e
 
+export COURSIER_REPOSITORIES="https://maven.aliyun.com/repository/public|https://repo1.maven.org/maven2"
+
 cd /home/rocket-chip
 git reset --hard
 git clean -fdx
@@ -770,6 +772,8 @@ exit 1
                 "fix-run.sh",
                 """#!/bin/bash
 set -e
+
+export COURSIER_REPOSITORIES="https://maven.aliyun.com/repository/public|https://repo1.maven.org/maven2"
 
 cd /home/rocket-chip
 git reset --hard

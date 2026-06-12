@@ -281,6 +281,8 @@ class CliArgs:
     def _check_max_workers(self):
         if self.max_workers <= 0:
             raise ValueError(f"Invalid max_workers: {self.max_workers}")
+        if self.max_workers_run_instance == 8 and self.max_workers != 8:
+            self.max_workers_run_instance = self.max_workers
         if self.max_workers_build_image <= 0:
             raise ValueError(
                 f"Invalid max_workers_build_image: {self.max_workers_build_image}"
