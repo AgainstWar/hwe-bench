@@ -501,17 +501,17 @@ class OpenCode(BaseInstalledAgent):
         if (self._get_env("WAVES_ENABLED") or "").lower() == "true":
             hints.append(
                 "[Available MCP: WAVES]\n"
-                "WAVES analyzes VCD/FST waveform files. Use it after generating a VCD "
+                "WAVES analyzes VCD/FST waveform files. **Use it after generating a VCD** "
                 "via the waves-debug skill to query signals, find transitions, and "
                 "inspect timing.\n"
             )
         if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
             hints.append(
                 "[Available Skill: waves-debug]\n"
-                "This skill guides you to enable VCD waveform dumping in simulation.\n"
-                "Use waveform analysis only when you are uncertain about signal "
-                "behavior after code review. If your initial fix attempt still fails "
-                "verification, consider enabling VCD dumping and using WAVES MCP to "
+                "This skill guides you to **enable VCD waveform dumping** in simulation.\n"
+                "Use waveform analysis **only when you are uncertain about signal "
+                "behavior** after code review. **If your initial fix still fails**, "
+                "consider enabling VCD dumping and using WAVES MCP to "
                 "diagnose the root cause.\n"
             )
         enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
