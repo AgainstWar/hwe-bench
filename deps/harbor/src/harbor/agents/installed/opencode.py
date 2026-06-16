@@ -509,14 +509,10 @@ class OpenCode(BaseInstalledAgent):
             hints.append(
                 "[Available Skill: waves-debug]\n"
                 "This skill guides you to enable VCD waveform dumping in simulation.\n"
-                "For every bug that involves logic, timing, FSM, or signal behavior, "
-                "you MUST:\n"
-                "1. Follow this skill to enable VCD dumping and run the testbench.\n"
-                "2. Use WAVES MCP to analyze the generated VCD.\n"
-                "Only skip this workflow for trivial config typos, constant values, "
-                "or pure spec-compliance changes where code review alone is sufficient.\n"
-                "For any other bug, waveform analysis is recommended if it helps "
-                "narrow down or confirm the root cause.\n"
+                "Use waveform analysis only when you are uncertain about signal "
+                "behavior after code review. If your initial fix attempt still fails "
+                "verification, consider enabling VCD dumping and using WAVES MCP to "
+                "diagnose the root cause.\n"
             )
         enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
         escaped_instruction = shlex.quote(enhanced_instruction)
