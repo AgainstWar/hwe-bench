@@ -508,15 +508,8 @@ class OpenCode(BaseInstalledAgent):
         if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
             hints.append(
                 "[Available Skill: waves-debug]\n"
-                "This skill guides you to **enable VCD waveform dumping** in simulation.\n"
-                "**Do NOT** run waveform generation by default. **Do NOT** use WAVES MCP "
-                "unless you have already tried static code analysis and it was insufficient.\n"
-                "**Skip waveform entirely** if:\n"
-                "- The bug is obviously a typo, constant value, or trivial wiring error\n"
-                "- The fix is clearly determined from reading the code\n"
-                "- You are already confident in the root cause\n"
-                "**Only enable VCD + WAVES** as a last resort when you have attempted a fix,\n"
-                "it failed verification, and you cannot determine the correct fix from code alone.\n"
+                "You can enable VCD waveform dumping in simulation and use WAVES MCP "
+                "to query signals and inspect timing. Use it if you think it helps.\n"
             )
         enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
         escaped_instruction = shlex.quote(enhanced_instruction)
