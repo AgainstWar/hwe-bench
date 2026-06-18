@@ -508,8 +508,8 @@ class OpenCode(BaseInstalledAgent):
         if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
             hints.append(
                 "[Available Skill: waves-debug]\n"
-                "You can enable VCD waveform dumping in simulation and use WAVES MCP "
-                "to query signals and inspect timing. Use it if you think it helps.\n"
+                "Guides you to enable VCD waveform dumping and use WAVES MCP for signal analysis. "
+                "Decide whether to use it based on your needs.\n"
             )
         enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
         escaped_instruction = shlex.quote(enhanced_instruction)
