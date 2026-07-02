@@ -23,6 +23,21 @@ from harbor.models.trajectories import (
 from harbor.utils.trajectory_utils import format_trajectory_json
 
 
+# === Skill Registry ===
+# Maps skill name → git repo URL and hint text injected into agent instruction.
+# Add new skills here; they become available via --ae SKILLS_INCLUDE=<name>.
+_SKILL_REGISTRY: dict[str, dict[str, str]] = {
+    "waves-debug": {
+        "repo": "https://github.com/AgainstWar/waves-skill.git",
+        "hint": (
+            "[Available Skill: waves-debug]\n"
+            "Guides you to enable VCD waveform dumping and use WAVES MCP for signal analysis. "
+            "Use it when you need to analyze a specific waveform or signal."
+        ),
+    },
+}
+
+
 class OpenCode(BaseInstalledAgent):
     """
     The OpenCode agent uses the opencode-ai tool to solve tasks.
@@ -505,12 +520,18 @@ class OpenCode(BaseInstalledAgent):
                 "via the waves-debug skill to query signals, find transitions, and "
                 "inspect timing.\n"
             )
-        if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
-            hints.append(
-                "[Available Skill: waves-debug]\n"
-                "Guides you to enable VCD waveform dumping and use WAVES MCP for signal analysis. "
-                "Use it when you need to analyze a specific waveform or signal.\n"
+        skills_enabled = (self._get_env("SKILLS_ENABLED") or "").lower().strip()
+        skills_include = (self._get_env("SKILLS_INCLUDE") or "").strip()
+        if skills_enabled == "true":
+            skill_names = (
+                [s.strip() for s in skills_include.split(",") if s.strip()]
+                if skills_include
+                else list(_SKILL_REGISTRY.keys())
             )
+            for skill_name in skill_names:
+                info = _SKILL_REGISTRY.get(skill_name)
+                if info:
+                    hints.append(info["hint"] + "\n")
         enhanced_instruction = "\n".join(hints) + ("\n" if hints else "") + instruction
         escaped_instruction = shlex.quote(enhanced_instruction)
 
@@ -598,24 +619,37 @@ class OpenCode(BaseInstalledAgent):
             )
             self.mcp_servers = (self.mcp_servers or []) + [waves_mcp]
 
-        # === waves-debug skill（按需安装）===
+        # === Skills（按 SKILLS_ENABLED + SKILLS_INCLUDE 安装）===
         self._skill_info: list[dict[str, str]] = []
-        if (self._get_env("SKILLS_ENABLED") or "").lower() == "true":
-            await self.exec_as_agent(
-                environment,
-                command=(
-                    "set -o pipefail; "
-                    "{ "
-                    "  if [ ! -d ~/.config/opencode/skills/waves-debug ]; then "
-                    "    git clone --depth 1 https://github.com/AgainstWar/waves-skill.git /tmp/waves-skill && "
-                    "    mkdir -p ~/.config/opencode/skills/waves-debug && "
-                    "    cp /tmp/waves-skill/SKILL.md ~/.config/opencode/skills/waves-debug/ && "
-                    "    cp -r /tmp/waves-skill/references ~/.config/opencode/skills/waves-debug/; "
-                    "  fi; "
-                    "} 2>&1 | tee -a /logs/agent/setup.log"
-                ),
-                env=env,
+        skills_enabled = (self._get_env("SKILLS_ENABLED") or "").lower().strip()
+        skills_include = (self._get_env("SKILLS_INCLUDE") or "").strip()
+        if skills_enabled == "true":
+            skill_names = (
+                [s.strip() for s in skills_include.split(",") if s.strip()]
+                if skills_include
+                else list(_SKILL_REGISTRY.keys())
             )
+            for skill_name in skill_names:
+                info = _SKILL_REGISTRY.get(skill_name)
+                if not info:
+                    continue
+                dir_name = f"~/.config/opencode/skills/{skill_name}"
+                tmp_dir = f"/tmp/{skill_name}"
+                await self.exec_as_agent(
+                    environment,
+                    command=(
+                        f"set -o pipefail; "
+                        "{{ "
+                        f"  if [ ! -d {dir_name} ]; then "
+                        f"    git clone --depth 1 {info['repo']} {tmp_dir} && "
+                        f"    mkdir -p {dir_name} && "
+                        f"    cp {tmp_dir}/SKILL.md {dir_name}/ && "
+                        f"    cp -r {tmp_dir}/references {dir_name}/; "
+                        f"  fi; "
+                        "} 2>&1 | tee -a /logs/agent/setup.log"
+                    ),
+                    env=env,
+                )
 
         skills_command = self._build_register_skills_command()
         if skills_command:
