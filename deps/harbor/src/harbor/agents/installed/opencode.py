@@ -29,10 +29,32 @@ from harbor.utils.trajectory_utils import format_trajectory_json
 _SKILL_REGISTRY: dict[str, dict[str, str]] = {
     "waves-debug": {
         "repo": "https://github.com/AgainstWar/waves-skill.git",
+        "subdir": "",  # SKILL.md at repo root
+        "refs_dir": "references",
         "hint": (
             "[Available Skill: waves-debug]\n"
             "Guides you to enable VCD waveform dumping and use WAVES MCP for signal analysis. "
             "Use it when you need to analyze a specific waveform or signal."
+        ),
+    },
+    "hdl-fault-localization": {
+        "repo": "https://github.com/AgainstWar/HDL-Repair-Skills.git",
+        "subdir": "hdl-fault-localization",
+        "refs_dir": "evals",
+        "hint": (
+            "[Available Skill: hdl-fault-localization]\n"
+            "Guides you to localize faults in HDL designs. "
+            "Use it to narrow down root causes in RTL code."
+        ),
+    },
+    "hdl-minimal-repair": {
+        "repo": "https://github.com/AgainstWar/HDL-Repair-Skills.git",
+        "subdir": "hdl-minimal-repair",
+        "refs_dir": "evals",
+        "hint": (
+            "[Available Skill: hdl-minimal-repair]\n"
+            "Guides you to apply minimal, safe patches for HDL bugs. "
+            "Use it after localizing the fault to generate a focused fix."
         ),
     },
 }
@@ -635,16 +657,18 @@ class OpenCode(BaseInstalledAgent):
                     continue
                 dir_name = f"~/.config/opencode/skills/{skill_name}"
                 tmp_dir = f"/tmp/{skill_name}"
+                info = _SKILL_REGISTRY.get(skill_name)
+                src_dir = f"{tmp_dir}/{info['subdir']}" if info["subdir"] else tmp_dir
                 await self.exec_as_agent(
                     environment,
                     command=(
                         f"set -o pipefail; "
-                        "{{ "
+                        "{ "
                         f"  if [ ! -d {dir_name} ]; then "
                         f"    git clone --depth 1 {info['repo']} {tmp_dir} && "
                         f"    mkdir -p {dir_name} && "
-                        f"    cp {tmp_dir}/SKILL.md {dir_name}/ && "
-                        f"    cp -r {tmp_dir}/references {dir_name}/; "
+                        f"    cp {src_dir}/SKILL.md {dir_name}/ && "
+                        f"    cp -r {src_dir}/{info['refs_dir']} {dir_name}/; "
                         f"  fi; "
                         "} 2>&1 | tee -a /logs/agent/setup.log"
                     ),
