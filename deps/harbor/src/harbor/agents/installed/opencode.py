@@ -27,12 +27,12 @@ from harbor.utils.trajectory_utils import format_trajectory_json
 # Maps skill name → git repo URL and hint text injected into agent instruction.
 # Add new skills here; they become available via --ae SKILLS_INCLUDE=<name>.
 _SKILL_REGISTRY: dict[str, dict[str, str]] = {
-    "waves-debug": {
+    "wave": {
         "repo": "https://github.com/AgainstWar/waves-skill.git",
         "subdir": "",  # SKILL.md at repo root
         "refs_dir": "references",
         "hint": (
-            "[Available Skill: waves-debug]\n"
+            "[Available Skill: wave]\n"
             "Guides you to enable VCD waveform dumping and use WAVES MCP for signal analysis. "
             "Use it when you need to analyze a specific waveform or signal."
         ),
