@@ -37,7 +37,7 @@ _SKILL_REGISTRY: dict[str, dict[str, str]] = {
             "Use it when you need to analyze a specific waveform or signal."
         ),
     },
-    "hdl-fault-localization": {
+    "locate": {
         "repo": "https://github.com/AgainstWar/HDL-Repair-Skills.git",
         "subdir": "hdl-fault-localization",
         "refs_dir": "evals",
@@ -47,7 +47,7 @@ _SKILL_REGISTRY: dict[str, dict[str, str]] = {
             "Use it to narrow down root causes in RTL code."
         ),
     },
-    "hdl-minimal-repair": {
+    "repair": {
         "repo": "https://github.com/AgainstWar/HDL-Repair-Skills.git",
         "subdir": "hdl-minimal-repair",
         "refs_dir": "evals",
