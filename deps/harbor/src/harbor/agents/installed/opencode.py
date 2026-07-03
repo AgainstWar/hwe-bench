@@ -42,7 +42,7 @@ _SKILL_REGISTRY: dict[str, dict[str, str]] = {
         "subdir": "hdl-fault-localization",
         "refs_dir": "evals",
         "hint": (
-            "[Available Skill: hdl-fault-localization]\n"
+            "[Available Skill: locate]\n"
             "Guides you to localize faults in HDL designs. "
             "Use it to narrow down root causes in RTL code."
         ),
@@ -52,7 +52,7 @@ _SKILL_REGISTRY: dict[str, dict[str, str]] = {
         "subdir": "hdl-minimal-repair",
         "refs_dir": "evals",
         "hint": (
-            "[Available Skill: hdl-minimal-repair]\n"
+            "[Available Skill: repair]\n"
             "Guides you to apply minimal, safe patches for HDL bugs. "
             "Use it after localizing the fault to generate a focused fix."
         ),
