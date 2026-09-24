@@ -626,8 +626,8 @@ class OpenCode(BaseInstalledAgent):
                     "set -o pipefail; "
                     "{ "
                     "  if ! command -v waves &>/dev/null; then "
-                    "    git clone --depth 1 https://github.com/AgainstWar/WAVES.git /tools/waves && "
-                    "    pip install /tools/waves; "
+                    "    git clone --depth 1 https://ghproxy.net/https://github.com/AgainstWar/WAVES.git /tools/waves && "
+                    "    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple /tools/waves; "
                     "  fi; "
                     "} 2>&1 | tee -a /logs/agent/setup.log"
                 ),
